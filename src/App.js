@@ -21,7 +21,7 @@ function App() {
   const [year, setYear] = useState(null);
   const [canGetTime, setCanGetTime] = useState(true);
 
-  const [typeDelay, setTypeDelay] = useState(1500);
+  const [typeDelay, setTypeDelay] = useState(800);
   const [typingTimer, setTypingTimer] = useState(null);
   const [autofill, setAutofill] = useState(null);
   const [searchLocation, setSearchLocation] = useState('');
@@ -388,7 +388,7 @@ function App() {
             value={searchLocation}
             onChange={e => setSearchLocation(e.target.value)}
         />
-        {autofill && <Table>
+        {(autofill && searchLocation !== "") && <Table id="autofillTable">
             <Table.Header>
                 <Table.Row>
                     <Table.HeaderCell>Name</Table.HeaderCell>
@@ -408,40 +408,34 @@ function App() {
                 })}
             </Table.Body>
         </Table>}
-        <Accordion>
-            {nextDeparturesKV && <Accordion.Item title={nextDeparturesKV.name}>
-            <Table>
-              <Table.Header>
-                <Table.Row>
-                  <Table.HeaderCell>Linje</Table.HeaderCell>
-                  <Table.HeaderCell>Destinasjon</Table.HeaderCell>
-                  <Table.HeaderCell>Avgang</Table.HeaderCell>
-                  <Table.HeaderCell>Forsinket</Table.HeaderCell>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {nextDeparturesKV && nextDeparturesKV.estimatedCalls.map((departure, index) => {
-                    let forsinket = false;
-
-                    let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
-                    let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
-
-                    if(aimedTime === expectedTime) {
-                        forsinket = true;
-                    }
-                    return (
-                        <Table.Row key={index}>
-                            <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
-                            <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
-                            <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
-                            {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
-                        </Table.Row>
-                    )
-                })}
-              </Table.Body>
-            </Table>
-            </Accordion.Item>}
-        </Accordion>
+        <Table id="departureTable">
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell>Linje</Table.HeaderCell>
+              <Table.HeaderCell>Destinasjon</Table.HeaderCell>
+              <Table.HeaderCell>Avgang</Table.HeaderCell>
+              <Table.HeaderCell>Forsinket</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {nextDeparturesKV && nextDeparturesKV.estimatedCalls.map((departure, index) => {
+                let forsinket = false;
+                let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
+                let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
+                if(aimedTime === expectedTime) {
+                    forsinket = true;
+                }
+                return (
+                    <Table.Row key={index}>
+                        <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
+                        <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
+                        <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
+                        {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
+                    </Table.Row>
+                )
+            })}
+          </Table.Body>
+        </Table>
       </div>
       <div className='bfc-base-3-bg bfl-padding'>
         <h1 className='bf-h1'>Oslo Sykkel</h1>

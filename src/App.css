@@ -25,12 +25,21 @@ main {
   margin: 0 auto;
 }
 
+#autofillTable {
+  z-index: 1;
+  position: fixed
+}
+
 #departures {
   overflow-y: scroll;
 }
 
 #departures::-webkit-scrollbar {
   display: none;
+}
+
+#departureTable {
+  margin-top: 50px;
 }
 
 @media (min-width: 600px) {
