@@ -14,7 +14,7 @@ main {
 }
 .center {
   display: flex;
-  height: 35%;
+  height: 45%;
   justify-content: center;
   align-items: center;
   flex-direction: column;
@@ -24,8 +24,13 @@ main {
   height: 65%;
   margin: 0 auto;
 }
-#departure-header {
-  margin-bottom: var(--bfs32);
+
+#departures {
+  overflow-y: scroll;
+}
+
+#departures::-webkit-scrollbar {
+  display: none;
 }
 
 @media (min-width: 600px) {

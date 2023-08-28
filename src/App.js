@@ -1,12 +1,15 @@
 import '@intility/bifrost-react/dist/bifrost-app.css'
 import './App.css';
-import { Nav, Card, Table, Icon } from '@intility/bifrost-react'
-import { faCloud, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { Nav, Card, Table, Icon, Accordion, Input, Checkbox } from '@intility/bifrost-react'
+import { faCloud, faCheck, faSearch } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import { useEffect, useState } from 'react';
 import intility from './img/intility.png'
+import cat from './img/cat.png'
 
 function App() {
+  const [catMode, setCatMode] = useState(false)
+
   const [weather, setWeather] = useState(null);
   const [weatherDescription, setWeatherDescription] = useState(null);
   const [location, setLocation] = useState(null);
@@ -18,7 +21,13 @@ function App() {
   const [year, setYear] = useState(null);
   const [canGetTime, setCanGetTime] = useState(true);
 
-  const [nextDepartures, setNextDepartures] = useState(null);
+  const [typeDelay, setTypeDelay] = useState(1500);
+  const [typingTimer, setTypingTimer] = useState(null);
+  const [autofill, setAutofill] = useState(null);
+  const [searchLocation, setSearchLocation] = useState('');
+  const [stopID, setStopID] = useState('NSR:StopPlace:6549'); // Kværnerveien
+  const [firstRun, setFirstRun] = useState(null);
+  const [nextDeparturesKV, setNextDeparturesKV] = useState(null);
 
   const [cycle, setCycle] = useState(null);
 
@@ -37,9 +46,8 @@ function App() {
     getWeather();
     window.setInterval(() => {
         getWeather();
-    }, 10000);
+    }, 60000);
   }, [location]);
-  console.log(weather);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -77,10 +85,9 @@ function App() {
     if(location) {
         const getStopData = async () => {
             axios.post('https://api.entur.io/journey-planner/v3/graphql', {
-                query: `# Avgangstavle - Kolbotn Krysset
-
+                query: `# Avgangstavle
                 {
-                    stopPlace(id: "NSR:StopPlace:6549") {
+                    stopPlace(id: "${stopID}") {
                       id
                       name
                       estimatedCalls(timeRange: 72100, numberOfDepartures: 12) {     
@@ -116,18 +123,19 @@ function App() {
                 variables: {}
             }).then(res => {
                 if(res.data.data.stopPlace) {
-                    setNextDepartures(res.data.data.stopPlace);
+                    setNextDeparturesKV(res.data.data.stopPlace);
                 }
             }).catch(err => {
                 console.log(err);
             })
         }
         getStopData();
-        window.setInterval(() => {
+        clearInterval(firstRun);
+        setFirstRun(window.setInterval(() => {
             getStopData();
-        }, 10000);
+        }, 30000));
     }
-  }, [location]);
+  }, [stopID, location]);
 
   useEffect(() => {
     const getCycles = async () => {
@@ -137,7 +145,7 @@ function App() {
     getCycles();
     window.setInterval(() => {
         getCycles();
-    }, 10000);
+    }, 30000);
   }, [])
 
   useEffect(() => {
@@ -322,7 +330,28 @@ function App() {
                 break;
         }
     }
-}, [weather]);
+  }, [weather]);
+
+  const catModeChange = () => {
+    if(catMode) {
+        setCatMode(false)
+    } else {
+        setCatMode(true)
+    }
+  }
+
+  useEffect(() => {
+    const getData = async () => {
+        const res = await axios.get(`https://api.entur.io/geocoder/v1/autocomplete?text=${searchLocation}&lang=no&size=8&layers=venue`);
+        setAutofill(res.data);
+    }
+    clearTimeout(typingTimer);
+    if(searchLocation !== "") {
+        setTypingTimer(setTimeout(() => {
+            getData();
+        }, typeDelay));
+    }
+  }, [searchLocation])
 
   return (
     <Nav
@@ -337,48 +366,82 @@ function App() {
         <div className='center'>
           <h1 className='bf-h1' id='time'>{time}</h1>
           <h3 className="bf-h3" id='date'>{day} {dayNumber} {month} {year}</h3>
+          <Checkbox type='switch' label='Cat mode' onChange={catModeChange} />
         </div>
         {weather && weatherDescription && <div className='weather-card'>
             <Card align='center'>
-              <Card.Image url={intility} aspectRatio='10/5'/>
+              {catMode ? <Card.Image url={cat} aspectRatio='10/5'/> : <Card.Image url={intility} aspectRatio='10/5'/>}
               <Card.Logo icon={faCloud} />
               <Card.Title>{weather.properties.timeseries[0].data.instant.details.air_temperature} °C</Card.Title>
               <Card.Content>{weatherDescription}</Card.Content>
             </Card>
           </div>}
       </div>
-      <div className='my-tall-element bfc-base-3-bg bfl-padding'>
-        {nextDepartures && <h1 className='bf-h1' id='departure-header'>Avganger fra {nextDepartures.name}</h1>}
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Linje</Table.HeaderCell>
-              <Table.HeaderCell>Destinasjon</Table.HeaderCell>
-              <Table.HeaderCell>Avgang</Table.HeaderCell>
-              <Table.HeaderCell>Forsinket</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {nextDepartures && nextDepartures.estimatedCalls.map((departure, index) => {
-                let forsinket = false;
-                
-                let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
-                let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
+      <div className='my-tall-element bfc-base-3-bg bfl-padding' id="departures">
+        <Input
+            placeholder='Stop Place'
+            label='search'
+            id="searchStop"
+            hideLabel
+            clearable
+            icon={faSearch}
+            value={searchLocation}
+            onChange={e => setSearchLocation(e.target.value)}
+        />
+        {autofill && <Table>
+            <Table.Header>
+                <Table.Row>
+                    <Table.HeaderCell>Name</Table.HeaderCell>
+                </Table.Row>
+            </Table.Header>
+            <Table.Body>
+            {autofill && autofill.features.map((item, index) => {
+                    return (
+                        <Table.Row key={index} onClick={() => {
+                            setStopID(item.properties.id);
+                            setSearchLocation("");
+                            setAutofill(null);
+                        }}>
+                            <Table.Cell>{item.properties.label}</Table.Cell>
+                        </Table.Row>
+                    )
+                })}
+            </Table.Body>
+        </Table>}
+        <Accordion>
+            {nextDeparturesKV && <Accordion.Item title={nextDeparturesKV.name}>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.HeaderCell>Linje</Table.HeaderCell>
+                  <Table.HeaderCell>Destinasjon</Table.HeaderCell>
+                  <Table.HeaderCell>Avgang</Table.HeaderCell>
+                  <Table.HeaderCell>Forsinket</Table.HeaderCell>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {nextDeparturesKV && nextDeparturesKV.estimatedCalls.map((departure, index) => {
+                    let forsinket = false;
 
-                if(aimedTime === expectedTime) {
-                    forsinket = true;
-                }
-                return (
-                    <Table.Row key={index}>
-                        <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
-                        <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
-                        <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
-                        {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
-                    </Table.Row>
-                )
-            })}
-          </Table.Body>
-        </Table>
+                    let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
+                    let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
+
+                    if(aimedTime === expectedTime) {
+                        forsinket = true;
+                    }
+                    return (
+                        <Table.Row key={index}>
+                            <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
+                            <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
+                            <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
+                            {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
+                        </Table.Row>
+                    )
+                })}
+              </Table.Body>
+            </Table>
+            </Accordion.Item>}
+        </Accordion>
       </div>
       <div className='bfc-base-3-bg bfl-padding'>
         <h1 className='bf-h1'>Oslo Sykkel</h1>
