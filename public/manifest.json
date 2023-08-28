@@ -1,0 +1,8 @@
+{
+  "short_name": "Info Board Setup",
+  "name": "An info board for teh setup department at intility AS",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

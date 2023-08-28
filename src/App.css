@@ -1,0 +1,38 @@
+main {
+  height: 90dvh;
+}
+#main {
+  height: 100%;
+}
+#time {
+  font-size: 6rem;
+  margin-bottom: 5px;
+}
+#date {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+.center {
+  display: flex;
+  height: 35%;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.weather-card {
+  width: 50%;
+  height: 65%;
+  margin: 0 auto;
+}
+#departure-header {
+  margin-bottom: var(--bfs32);
+}
+
+@media (min-width: 600px) {
+  .my-grid-four {
+    --bfl-columns: 2;
+  }
+  .my-tall-element {
+    grid-row: span 2;
+  }
+}
