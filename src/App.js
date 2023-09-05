@@ -1,11 +1,14 @@
 import '@intility/bifrost-react/dist/bifrost-app.css'
 import './App.css';
-import { Nav, Card, Table, Icon, Input, Checkbox, Dropdown, Accordion, Select } from '@intility/bifrost-react'
+import { Nav, Card, Table, Icon, Input, Checkbox, Dropdown, Accordion, Select, Modal } from '@intility/bifrost-react'
 import { faCloud, faCheck, faSearch, faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import { useEffect, useState } from 'react';
+import { LineChart, Line, XAxis, YAxis } from 'recharts';
 import intility from './img/intility.png'
 import cat from './img/cat.png'
+
+Modal.setAppElement('#root');
 
 function App() {
   const [catMode, setCatMode] = useState(false)
@@ -13,6 +16,12 @@ function App() {
   const [weather, setWeather] = useState(null);
   const [weatherDescription, setWeatherDescription] = useState(null);
   const [location, setLocation] = useState(null);
+
+  const [weatherModal, setWeatherModal] = useState(false);
+  const [chartDataTemp, setChartDataTemp] = useState([]);
+  const [chartDataHumid, setChartDataHumid] = useState([]);
+  const [chartDataWind, setChartDataWind] = useState([]);
+  const [chartSize, setChartSize] = useState({});
 
   const [time, setTime] = useState(null);
   const [day, setDay] = useState(null);
@@ -42,6 +51,26 @@ function App() {
             axios.get('https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=' + location.latitude + '&lon=' + location.longitude)
                 .then((response) => {
                     setWeather(response.data);
+
+                    let tempData = [];
+                    for(let i = 0; i < 24; i++) {
+                        tempData.push({name: response.data.properties.timeseries[i].time.substring(11, 16), temp: response.data.properties.timeseries[i].data.instant.details.air_temperature})
+                    }
+                    setChartDataTemp(tempData);
+
+                    let humidData = [];
+                    for(let i = 0; i < 24; i++) {
+                        humidData.push({name: response.data.properties.timeseries[i].time.substring(11, 16), humid: response.data.properties.timeseries[i].data.instant.details.relative_humidity})
+                    }
+                    setChartDataHumid(humidData);
+
+                    let windData = [];
+                    for(let i = 0; i < 24; i++) {
+                        windData.push({name: response.data.properties.timeseries[i].time.substring(11, 16), wind: response.data.properties.timeseries[i].data.instant.details.wind_speed})
+                    }
+                    setChartDataWind(windData);
+
+                    setChartSize({ height: (window.innerHeight / 100) * 75 / 2, width: (window.innerWidth / 100) * 75 / 2 });
                 })
                 .catch((error) => {
                     console.log(error);
@@ -402,13 +431,46 @@ function App() {
           <Checkbox type='switch' label='Cat mode' onChange={catModeChange} />
         </div>
         {weather && weatherDescription && <div className='weather-card'>
-            <Card align='center'>
+            <Card align='center' onClick={() => setWeatherModal(true)}>
               {catMode ? <Card.Image url={cat} aspectRatio='10/5'/> : <Card.Image url={intility} aspectRatio='10/5'/>}
               <Card.Logo icon={faCloud} />
               <Card.Title>{weather.properties.timeseries[0].data.instant.details.air_temperature} °C</Card.Title>
               <Card.Content>{weatherDescription}</Card.Content>
             </Card>
           </div>}
+        <Modal
+            center
+            header='Værvarsel'
+            isOpen={weatherModal}
+            onRequestClose={() => setWeatherModal(false)}
+        >
+            <div className='bfl-autocol' id='weatherModal'>
+                <div className='bfc-base-3-bg bfl-padding'>
+                    Temperature in °C
+                    <LineChart data={chartDataTemp} width={chartSize.width} height={chartSize.height}>
+                        <Line type="monotone" dataKey="temp" stroke="#8884d8" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                    </LineChart>
+                </div>
+                <div className='bfc-base-3-bg bfl-padding'>
+                    Humidity in %
+                    <LineChart data={chartDataHumid} width={chartSize.width} height={chartSize.height}>
+                        <Line type="monotone" dataKey="humid" stroke="#8884d8" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                    </LineChart>
+                </div>
+                <div className='bfc-base-3-bg bfl-padding'>
+                    Windspeed in m/s
+                    <LineChart data={chartDataWind} width={chartSize.width} height={chartSize.height}>
+                        <Line type="monotone" dataKey="wind" stroke="#8884d8" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                    </LineChart>
+                </div>
+            </div>
+        </Modal>
       </div>
       <div className='my-tall-element bfc-base-3-bg bfl-padding' id="departures">
         <Dropdown
