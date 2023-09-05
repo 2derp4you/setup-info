@@ -1,7 +1,7 @@
 import '@intility/bifrost-react/dist/bifrost-app.css'
 import './App.css';
-import { Nav, Card, Table, Icon, Accordion, Input, Checkbox } from '@intility/bifrost-react'
-import { faCloud, faCheck, faSearch } from '@fortawesome/free-solid-svg-icons'
+import { Nav, Card, Table, Icon, Input, Checkbox, Dropdown, Accordion, Select } from '@intility/bifrost-react'
+import { faCloud, faCheck, faSearch, faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import { useEffect, useState } from 'react';
 import intility from './img/intility.png'
@@ -25,9 +25,14 @@ function App() {
   const [typingTimer, setTypingTimer] = useState(null);
   const [autofill, setAutofill] = useState(null);
   const [searchLocation, setSearchLocation] = useState('');
+  const [openAutofill, setOpenAutofill] = useState(false);
   const [stopID, setStopID] = useState('NSR:StopPlace:6549'); // Kværnerveien
   const [firstRun, setFirstRun] = useState(null);
-  const [nextDeparturesKV, setNextDeparturesKV] = useState(null);
+  const [nextDepartures, setNextDepartures] = useState(null);
+
+  const [stopSettings, setStopSettings] = useState(false);
+  const [lineOptions, setLineOptions] = useState(null);
+  const [lineFilter, setLineFilter] = useState(null);
 
   const [cycle, setCycle] = useState(null);
 
@@ -90,7 +95,7 @@ function App() {
                     stopPlace(id: "${stopID}") {
                       id
                       name
-                      estimatedCalls(timeRange: 72100, numberOfDepartures: 12) {     
+                      estimatedCalls(timeRange: 72100, numberOfDepartures: 50) {   
                         realtime
                         aimedArrivalTime
                         aimedDepartureTime
@@ -123,7 +128,7 @@ function App() {
                 variables: {}
             }).then(res => {
                 if(res.data.data.stopPlace) {
-                    setNextDeparturesKV(res.data.data.stopPlace);
+                    setNextDepartures(res.data.data.stopPlace);
                 }
             }).catch(err => {
                 console.log(err);
@@ -138,15 +143,43 @@ function App() {
   }, [stopID, location]);
 
   useEffect(() => {
+    if(nextDepartures !== null) {
+        let tempOptions = [{ value: '', label: 'All'}];
+        for(let i = 0; i < nextDepartures.estimatedCalls.length; i++) {
+            if(!tempOptions.find(item => item.value.split("/")[0] === nextDepartures.estimatedCalls[i].serviceJourney.journeyPattern.line.id.split(":")[2])) {
+                tempOptions.push({ value: nextDepartures.estimatedCalls[i].serviceJourney.journeyPattern.line.id.split(":")[2] + "/" + nextDepartures.estimatedCalls[i].destinationDisplay.frontText, label: nextDepartures.estimatedCalls[i].serviceJourney.journeyPattern.line.id.split(":")[2] + " " + nextDepartures.estimatedCalls[i].destinationDisplay.frontText})
+            } else {
+                if(!tempOptions.find(item => item.value.split("/")[1] === nextDepartures.estimatedCalls[i].destinationDisplay.frontText)) {
+                    tempOptions.push({ value: nextDepartures.estimatedCalls[i].serviceJourney.journeyPattern.line.id.split(":")[2] + "/" + nextDepartures.estimatedCalls[i].destinationDisplay.frontText, label: nextDepartures.estimatedCalls[i].serviceJourney.journeyPattern.line.id.split(":")[2] + " " + nextDepartures.estimatedCalls[i].destinationDisplay.frontText})
+                }
+            }
+        }
+        tempOptions.sort((a,b) => a.value.split("/")[0] - b.value.split("/")[0])
+        setLineOptions(tempOptions);
+        setStopSettings(true);
+    }
+  }, [nextDepartures])
+
+  /*useEffect(() => {
     const getCycles = async () => {
-        const res = await axios.get('https://gbfs.urbansharing.com/oslobysykkel.no/station_status.json');
-        setCycle(res.data);
+        axios.get('https://gbfs.urbansharing.com/oslobysykkel.no/station_status.json', {
+            withCredentials: true,
+            headers: {
+                'Client-Identifier': 'intility-info-board'
+            }
+            })
+        .then((response) => {
+            setCycle(response.data);
+        })
+        .catch((error) => {
+            console.log(error);
+        });
     }
     getCycles();
     window.setInterval(() => {
         getCycles();
     }, 30000);
-  }, [])
+  }, [])*/
 
   useEffect(() => {
     if(weather) {
@@ -378,36 +411,52 @@ function App() {
           </div>}
       </div>
       <div className='my-tall-element bfc-base-3-bg bfl-padding' id="departures">
-        <Input
-            placeholder='Stop Place'
-            label='search'
-            id="searchStop"
-            hideLabel
-            clearable
-            icon={faSearch}
-            value={searchLocation}
-            onChange={e => setSearchLocation(e.target.value)}
-        />
-        {(autofill && searchLocation !== "") && <Table id="autofillTable">
-            <Table.Header>
-                <Table.Row>
-                    <Table.HeaderCell>Name</Table.HeaderCell>
-                </Table.Row>
-            </Table.Header>
-            <Table.Body>
-            {autofill && autofill.features.map((item, index) => {
-                    return (
-                        <Table.Row key={index} onClick={() => {
-                            setStopID(item.properties.id);
-                            setSearchLocation("");
-                            setAutofill(null);
-                        }}>
-                            <Table.Cell>{item.properties.label}</Table.Cell>
-                        </Table.Row>
-                    )
-                })}
-            </Table.Body>
-        </Table>}
+        <Dropdown
+            content={
+                <Table noBorder>
+                    <Table.Body>
+                    {autofill && autofill.features.map((item, index) => {
+                        return (
+                            <Table.Row key={index} className="autofill-item" onClick={() => {
+                                setSearchLocation(item.properties.label);
+                                setStopID(item.properties.id);
+                                setOpenAutofill(false);
+                            }}>
+                                <Table.Cell><Icon icon={faChevronRight} marginRight />{item.properties.label}</Table.Cell>
+                            </Table.Row>
+                        )
+                    }
+                    )}
+                    </Table.Body>
+                </Table>
+            }
+            visible={openAutofill}
+            onClickOutside={() => setOpenAutofill(false)}
+            variant='border'
+        >
+            <Input
+                placeholder='Stop Place'
+                label='search'
+                id="searchStop"
+                hideLabel
+                clearable
+                icon={faSearch}
+                value={searchLocation}
+                onChange={e => setSearchLocation(e.target.value)}
+                onFocus={() => setOpenAutofill(true)}
+            />
+        </Dropdown>
+        {nextDepartures && stopSettings && <Accordion>
+            <Accordion.Item title='Search settings'>
+                <Select
+                    label='Linje'
+                    hideLabel
+                    placeholder='Linje'
+                    options={lineOptions}
+                    onChange={e => setLineFilter(e.value)}
+                />
+            </Accordion.Item>
+        </Accordion>}
         <Table id="departureTable">
           <Table.Header>
             <Table.Row>
@@ -418,7 +467,15 @@ function App() {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {nextDeparturesKV && nextDeparturesKV.estimatedCalls.map((departure, index) => {
+            {nextDepartures && nextDepartures.estimatedCalls.map((departure, index) => {
+                if(lineFilter) {
+                    if(lineFilter.split("/")[0] !== departure.serviceJourney.journeyPattern.line.id.split(":")[2]) {
+                        return null;
+                    } else if (lineFilter.split("/")[1] !== departure.destinationDisplay.frontText) {
+                        return null;
+                    }
+                }
+
                 let forsinket = false;
                 let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
                 let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
@@ -439,7 +496,7 @@ function App() {
       </div>
       <div className='bfc-base-3-bg bfl-padding'>
         <h1 className='bf-h1'>Oslo Sykkel</h1>
-        {cycle && <Table>
+        {cycle ? <Table>
             <Table.Header>
                 <Table.Row>
                     <Table.HeaderCell>Lokasjon</Table.HeaderCell>
@@ -459,7 +516,7 @@ function App() {
                     <Table.Cell>{cycle.data.stations.find(item => item.station_id === "737").num_bikes_available}</Table.Cell>
                 </Table.Row>
             </Table.Body>
-        </Table>}
+        </Table> : <h4 className="bf-h4">Ute av Drift intil videre... :(</h4>}
       </div>
     </div>
   </Nav>
