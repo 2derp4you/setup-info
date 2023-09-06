@@ -26,12 +26,15 @@ main {
   cursor: pointer;
 }
 #weatherModal .bfc-base-3-bg {
-  width: fit-content;
+  width: 100%;
 }
 #weatherModal {
   width: 85dvw;
   --bfl-autocol-width: 35%;
   gap: 8px;
+}
+#weatherModal .bf-h2 {
+  margin-top: 0;
 }
 
 #departures {

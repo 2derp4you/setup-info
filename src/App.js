@@ -80,7 +80,7 @@ function App() {
     getWeather();
     window.setInterval(() => {
         getWeather();
-    }, 60000);
+    }, 300000);
   }, [location]);
 
   useEffect(() => {
@@ -167,7 +167,7 @@ function App() {
         clearInterval(firstRun);
         setFirstRun(window.setInterval(() => {
             getStopData();
-        }, 30000));
+        }, 45000));
     }
   }, [stopID, location]);
 
@@ -446,7 +446,14 @@ function App() {
         >
             <div className='bfl-autocol' id='weatherModal'>
                 <div className='bfc-base-3-bg bfl-padding'>
-                    Temperature in °C
+                    <h2 className='bf-h2'>Nå <span className='bf-h4 bfc-theme'>oppdatert kl {weather && weather.properties.meta.updated_at.substring(11, 16)}</span>:</h2>
+                    <h3 className='bf-h3'>{weatherDescription}</h3>
+                    <h4 className='bf-h4'>Temperatur: <span className='bfc-theme'>{weather && weather.properties.timeseries[0].data.instant.details.air_temperature} °C</span></h4>
+                    <h4 className='bf-h4'>Luftfuktighet: <span className='bfc-theme'>{weather && weather.properties.timeseries[0].data.instant.details.relative_humidity} %</span></h4>
+                    <h4 className='bf-h4'>Vind: <span className='bfc-theme'>{weather && weather.properties.timeseries[0].data.instant.details.wind_speed} m/s</span></h4>
+                </div>
+                <div className='bfc-base-3-bg bfl-padding'>
+                    Temeratur neste 24-timene i °C
                     <LineChart data={chartDataTemp} width={chartSize.width} height={chartSize.height}>
                         <Line type="monotone" dataKey="temp" stroke="#8884d8" />
                         <XAxis dataKey="name" />
@@ -454,7 +461,7 @@ function App() {
                     </LineChart>
                 </div>
                 <div className='bfc-base-3-bg bfl-padding'>
-                    Humidity in %
+                    Luftfuktighet neste 24-timene i %
                     <LineChart data={chartDataHumid} width={chartSize.width} height={chartSize.height}>
                         <Line type="monotone" dataKey="humid" stroke="#8884d8" />
                         <XAxis dataKey="name" />
@@ -462,7 +469,7 @@ function App() {
                     </LineChart>
                 </div>
                 <div className='bfc-base-3-bg bfl-padding'>
-                    Windspeed in m/s
+                    Vind neste 24-timene i m/s
                     <LineChart data={chartDataWind} width={chartSize.width} height={chartSize.height}>
                         <Line type="monotone" dataKey="wind" stroke="#8884d8" />
                         <XAxis dataKey="name" />
