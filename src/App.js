@@ -273,7 +273,7 @@ function App() {
     }
   }, [nextDepartures])
 
-  useEffect(() => {
+  /*useEffect(() => {
     const getCycles = async () => {
         axios.get('https://gbfs.urbansharing.com/oslobysykkel.no/station_status.json', {
             withCredentials: true,
@@ -292,7 +292,7 @@ function App() {
     window.setInterval(() => {
         getCycles();
     }, 30000);
-  }, [])
+  }, [])*/
 
   useEffect(() => {
     if(weather) {
@@ -656,7 +656,6 @@ function App() {
                       <Table.Header>
                         <Table.Row>
                           <Table.HeaderCell>Linje</Table.HeaderCell>
-                          <Table.HeaderCell>Destinasjon</Table.HeaderCell>
                           <Table.HeaderCell>Avgang</Table.HeaderCell>
                           <Table.HeaderCell>Forsinket</Table.HeaderCell>
                         </Table.Row>
@@ -679,8 +678,7 @@ function App() {
                             }
                             return (
                                 <Table.Row key={index}>
-                                    <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
-                                    <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
+                                    <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.destinationDisplay.frontText}</Table.Cell>
                                     <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
                                     {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
                                 </Table.Row>
@@ -782,8 +780,11 @@ function App() {
                                 <>
                                     {group.tripPatterns.map((item) => {
                                         return (
-                                            <Accordion.Item title={item.startTime.substring(11, 16)}>
-                                                <h4 className='bf-h4'>Fra {item.legs[0].fromPlace.name}</h4>
+                                            <Accordion.Item title={item.startTime.substring(11, 16)} onClick={() => setActiveStep(item.legs[0])}>
+                                                <div className='sideToSide'>
+                                                    <h4 className='bf-h4'>Fra {item.legs[0].fromPlace.name}</h4>
+                                                    <h4 className='bf-h4'>Til {item.legs[item.legs.length - 1].toPlace.name}</h4>
+                                                </div>
                                                 <StepBar>
                                                     {item.legs.map((leg, index) => {
                                                         return (
@@ -800,8 +801,11 @@ function App() {
                                                         )
                                                     })}
                                                 </StepBar>
-                                                <h4 className='bf-h4'>Til {item.legs[item.legs.length - 1].toPlace.name}</h4>
-                                                
+                                                <h5 className='bf-h5'>{activeStep.mode === 'foot' ? 'Walk' : (activeStep.mode === 'bus' ? 'Bus' : (activeStep.mode === 'rail' ? 'Train' : (activeStep.mode === 'subway' && 'Subway')))}</h5>
+                                                <StepBar variant='circle'>
+                                                    <StepBar.Item active>{activeStep.mode === 'foot' ? 'From' : 'On'} {activeStep.fromPlace.name}</StepBar.Item>
+                                                    <StepBar.Item>{activeStep.mode === 'foot' ? 'To' : 'Off'} {activeStep.toPlace.name}</StepBar.Item>
+                                                </StepBar>
                                             </Accordion.Item>
                                         )
                                     })}

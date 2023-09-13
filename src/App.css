@@ -63,7 +63,7 @@ main {
   width: 100%;
   align-items: center;
 }
-.hoz div {
+.hoz .bf-datepicker-container {
   width: 100%;
 }
 
@@ -75,6 +75,11 @@ main {
 .back1 {
   height: 100%;
   width: 100%;
+}
+
+.sideToSide {
+  display: flex;
+  justify-content: space-between;
 }
 
 @media (min-width: 600px) {
