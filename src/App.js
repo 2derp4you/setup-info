@@ -1,7 +1,7 @@
 import '@intility/bifrost-react/dist/bifrost-app.css'
 import './App.css';
-import { Nav, Card, Table, Icon, Input, Checkbox, Dropdown, Accordion, Select, Modal } from '@intility/bifrost-react'
-import { faCloud, faCheck, faSearch, faChevronRight } from '@fortawesome/free-solid-svg-icons'
+import { Nav, Card, Table, Icon, Input, Checkbox, Dropdown, Accordion, Select, Modal, Tabs, DatePicker, Button, StepBar } from '@intility/bifrost-react'
+import { faCloud, faCheck, faSearch, faChevronRight, faWalking, faBus, faTrain, faSubway } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis } from 'recharts';
@@ -42,6 +42,24 @@ function App() {
   const [stopSettings, setStopSettings] = useState(false);
   const [lineOptions, setLineOptions] = useState(null);
   const [lineFilter, setLineFilter] = useState(null);
+
+  const [from, setFrom] = useState(false);
+  const [to, setTo] = useState(false);
+  const [when, setWhen] = useState(false);
+  const [arriveOrDepart, setArriveOrDepart] = useState(false);
+  const [tripPlaner, setTripPlaner] = useState([]);
+  const [searchButtonState, setSearchButtonState] = useState('inactive')
+
+  const [autofillFrom, setAutofillFrom] = useState(null);
+  const [searchLocationFrom, setSearchLocationFrom] = useState('');
+  const [openAutofillFrom, setOpenAutofillFrom] = useState(false);
+  const [stopIdFrom, setStopIDFrom] = useState('');
+  const [autofillTo, setAutofillTo] = useState(null);
+  const [searchLocationTo, setSearchLocationTo] = useState('');
+  const [openAutofillTo, setOpenAutofillTo] = useState(false);
+  const [stopIdTo, setStopIDTo] = useState('');
+
+  const [activeStep, setActiveStep] = useState(null);
 
   const [cycle, setCycle] = useState(null);
 
@@ -171,6 +189,72 @@ function App() {
     }
   }, [stopID, location]);
 
+  const getTripPlans = async () => {
+    if(searchButtonState !== 'inactive') {
+        axios.post('https://api.entur.io/client/search/v1/transit', {
+            from: {
+                place: stopIdFrom,
+                name: searchLocationTo,
+                coordinates: {
+                    latitude: 59.906272,
+                    longitude: 10.775063
+                }
+            },
+            to: {
+                place: stopIdTo,
+                name: searchLocationFrom,
+                coordinates: {
+                    latitude: 59.81079791294875,
+                    longitude: 10.81027877959516
+                }
+            },
+            searchDate: when,
+            tripMode: "oneway",
+            arriveBy: arriveOrDepart,
+            searchPreset: "RECOMMENDED",
+            walkSpeed: 1.3,
+            minimumTransferTime: 120,
+            searchFilter: [
+                "rail",
+                "tram",
+                "bus",
+                "coach",
+                "water",
+                "car_ferry",
+                "metro",
+                "flytog",
+                "flybuss"
+            ],
+            debugItineraryFilter: false
+        }).then(res => {
+            if(res.data.tripPatterns) {
+                let temp = [];
+                temp.push(res.data);
+                setTripPlaner(temp);
+                setActiveStep(res.data.tripPatterns[0].legs[0])
+            }
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+  }
+
+  const moreTripPlans = async () => {
+    if(tripPlaner) {
+        let num = tripPlaner.length;
+        axios.post('https://api.entur.io/client/search/v1/transit', {
+            cursor: tripPlaner[num - 1].nextCursor
+        }).then(res => {
+            if(res.data.tripPatterns) {
+                let temp = [...tripPlaner, res.data];
+                setTripPlaner(temp);
+            }
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+  }
+
   useEffect(() => {
     if(nextDepartures !== null) {
         let tempOptions = [{ value: '', label: 'All'}];
@@ -189,7 +273,7 @@ function App() {
     }
   }, [nextDepartures])
 
-  /*useEffect(() => {
+  useEffect(() => {
     const getCycles = async () => {
         axios.get('https://gbfs.urbansharing.com/oslobysykkel.no/station_status.json', {
             withCredentials: true,
@@ -208,7 +292,7 @@ function App() {
     window.setInterval(() => {
         getCycles();
     }, 30000);
-  }, [])*/
+  }, [])
 
   useEffect(() => {
     if(weather) {
@@ -415,6 +499,45 @@ function App() {
     }
   }, [searchLocation])
 
+  useEffect(() => {
+    const getData = async () => {
+        const res = await axios.get(`https://api.entur.io/geocoder/v1/autocomplete?text=${searchLocationFrom}&lang=no&size=8&layers=venue`);
+        setAutofillFrom(res.data);
+    }
+    clearTimeout(typingTimer);
+    if(searchLocationFrom !== "") {
+        setTypingTimer(setTimeout(() => {
+            getData();
+        }, typeDelay));
+    }
+  }, [searchLocationFrom])
+
+  useEffect(() => {
+    const getData = async () => {
+        const res = await axios.get(`https://api.entur.io/geocoder/v1/autocomplete?text=${searchLocationTo}&lang=no&size=8&layers=venue`);
+        setAutofillTo(res.data);
+    }
+    clearTimeout(typingTimer);
+    if(searchLocationTo !== "") {
+        setTypingTimer(setTimeout(() => {
+            getData();
+        }, typeDelay));
+    }
+  }, [searchLocationTo])
+
+  useEffect(() => {
+    if(searchLocationFrom !== '' && searchLocationTo !== '' && when !== false) {
+        setSearchButtonState('default')
+    } else {
+        setSearchButtonState('inactive')
+    }
+  }, [searchLocationFrom, searchLocationTo, when])
+
+  const handleLegClick = (e, item) => {
+    e.preventDefault();
+    setActiveStep(item);
+  }
+
   return (
     <Nav
     appName='Info Board Setup'
@@ -423,7 +546,7 @@ function App() {
       </>
     }
   >
-    <div className='bfl-grid my-grid-four' id='main'>
+    <div className='bfl-grid my-grid-three' id='main'>
       <div className='bfc-base-3-bg bfl-padding'>
         <div className='center'>
           <h1 className='bf-h1' id='time'>{time}</h1>
@@ -479,89 +602,217 @@ function App() {
             </div>
         </Modal>
       </div>
-      <div className='my-tall-element bfc-base-3-bg bfl-padding' id="departures">
-        <Dropdown
-            content={
-                <Table noBorder>
-                    <Table.Body>
-                    {autofill && autofill.features.map((item, index) => {
-                        return (
-                            <Table.Row key={index} className="autofill-item" onClick={() => {
-                                setSearchLocation(item.properties.label);
-                                setStopID(item.properties.id);
-                                setOpenAutofill(false);
-                            }}>
-                                <Table.Cell><Icon icon={faChevronRight} marginRight />{item.properties.label}</Table.Cell>
-                            </Table.Row>
-                        )
-                    }
-                    )}
-                    </Table.Body>
-                </Table>
-            }
-            visible={openAutofill}
-            onClickOutside={() => setOpenAutofill(false)}
-            variant='border'
-        >
-            <Input
-                placeholder='Stop Place'
-                label='search'
-                id="searchStop"
-                hideLabel
-                clearable
-                icon={faSearch}
-                value={searchLocation}
-                onChange={e => setSearchLocation(e.target.value)}
-                onFocus={() => setOpenAutofill(true)}
-            />
-        </Dropdown>
-        {nextDepartures && stopSettings && <Accordion>
-            <Accordion.Item title='Search settings'>
-                <Select
-                    label='Linje'
-                    hideLabel
-                    placeholder='Linje'
-                    options={lineOptions}
-                    onChange={e => setLineFilter(e.value)}
-                />
-            </Accordion.Item>
-        </Accordion>}
-        <Table id="departureTable">
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Linje</Table.HeaderCell>
-              <Table.HeaderCell>Destinasjon</Table.HeaderCell>
-              <Table.HeaderCell>Avgang</Table.HeaderCell>
-              <Table.HeaderCell>Forsinket</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {nextDepartures && nextDepartures.estimatedCalls.map((departure, index) => {
-                if(lineFilter) {
-                    if(lineFilter.split("/")[0] !== departure.serviceJourney.journeyPattern.line.id.split(":")[2]) {
-                        return null;
-                    } else if (lineFilter.split("/")[1] !== departure.destinationDisplay.frontText) {
-                        return null;
-                    }
-                }
-
-                let forsinket = false;
-                let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
-                let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
-                if(aimedTime === expectedTime) {
-                    forsinket = true;
-                }
-                return (
-                    <Table.Row key={index}>
-                        <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
-                        <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
-                        <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
-                        {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
-                    </Table.Row>
-                )
-            })}
-          </Table.Body>
-        </Table>
+      <div className='my-tall-element bfc-base-bg my-wide-element' id="departures">
+        <Tabs>
+            <Tabs.Item content={
+                <>
+                    <Dropdown
+                        content={
+                            <Table noBorder>
+                                <Table.Body>
+                                {autofill && autofill.features.map((item, index) => {
+                                    return (
+                                        <Table.Row key={index} className="autofill-item" onClick={() => {
+                                            setSearchLocation(item.properties.label);
+                                            setStopID(item.properties.id);
+                                            setOpenAutofill(false);
+                                        }}>
+                                            <Table.Cell><Icon icon={faChevronRight} marginRight />{item.properties.label}</Table.Cell>
+                                        </Table.Row>
+                                    )
+                                }
+                                )}
+                                </Table.Body>
+                            </Table>
+                        }
+                        visible={openAutofill}
+                        onClickOutside={() => setOpenAutofill(false)}
+                        variant='border'
+                    >
+                        <Input
+                            placeholder='Stop Place'
+                            label='search'
+                            id="searchStop"
+                            hideLabel
+                            clearable
+                            icon={faSearch}
+                            value={searchLocation}
+                            onChange={e => setSearchLocation(e.target.value)}
+                            onFocus={() => setOpenAutofill(true)}
+                        />
+                    </Dropdown>
+                    {nextDepartures && stopSettings && <Accordion>
+                        <Accordion.Item title='Search settings'>
+                            <Select
+                                label='Linje'
+                                hideLabel
+                                placeholder='Linje'
+                                options={lineOptions}
+                                onChange={e => setLineFilter(e.value)}
+                            />
+                        </Accordion.Item>
+                    </Accordion>}
+                    <Table id="departureTable">
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.HeaderCell>Linje</Table.HeaderCell>
+                          <Table.HeaderCell>Destinasjon</Table.HeaderCell>
+                          <Table.HeaderCell>Avgang</Table.HeaderCell>
+                          <Table.HeaderCell>Forsinket</Table.HeaderCell>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {nextDepartures && nextDepartures.estimatedCalls.map((departure, index) => {
+                            if(lineFilter) {
+                                if(lineFilter.split("/")[0] !== departure.serviceJourney.journeyPattern.line.id.split(":")[2]) {
+                                    return null;
+                                } else if (lineFilter.split("/")[1] !== departure.destinationDisplay.frontText) {
+                                    return null;
+                                }
+                            }
+                        
+                            let forsinket = false;
+                            let aimedTime = new Date(departure.aimedDepartureTime.substring(0, 16)).getTime();
+                            let expectedTime = new Date(departure.expectedDepartureTime.substring(0, 16)).getTime();
+                            if(aimedTime === expectedTime) {
+                                forsinket = true;
+                            }
+                            return (
+                                <Table.Row key={index}>
+                                    <Table.Cell>{departure.serviceJourney.journeyPattern.line.id.split(":")[2]} {departure.serviceJourney.journeyPattern.line.name}</Table.Cell>
+                                    <Table.Cell>{departure.destinationDisplay.frontText}</Table.Cell>
+                                    <Table.Cell>{departure.expectedDepartureTime.substring(11, 16)}</Table.Cell>
+                                    {forsinket ? <Table.Cell><Icon icon={faCheck} /></Table.Cell> : <Table.Cell></Table.Cell>}
+                                </Table.Row>
+                            )
+                        })}
+                      </Table.Body>
+                    </Table>
+                </>
+            }>Departure Board</Tabs.Item>
+            <Tabs.Item content={
+                <>
+                    <Dropdown
+                        content={
+                            <Table noBorder>
+                                <Table.Body>
+                                {autofillFrom && autofillFrom.features.map((item, index) => {
+                                    return (
+                                        <Table.Row key={index} className="autofill-item" onClick={() => {
+                                            setSearchLocationFrom(item.properties.label);
+                                            setStopIDFrom(item.properties.id);
+                                            setOpenAutofillFrom(false);
+                                        }}>
+                                            <Table.Cell><Icon icon={faChevronRight} marginRight />{item.properties.label}</Table.Cell>
+                                        </Table.Row>
+                                    )
+                                }
+                                )}
+                                </Table.Body>
+                            </Table>
+                        }
+                        visible={openAutofillFrom}
+                        onClickOutside={() => setOpenAutofillFrom(false)}
+                        variant='border'
+                    >
+                        <Input
+                            placeholder='Stop Place'
+                            label='From'
+                            id="searchStop"
+                            clearable
+                            icon={faSearch}
+                            value={searchLocationFrom}
+                            onChange={e => setSearchLocationFrom(e.target.value)}
+                            onFocus={() => setOpenAutofillFrom(true)}
+                            required
+                        />
+                    </Dropdown>
+                    <Dropdown
+                        content={
+                            <Table noBorder>
+                                <Table.Body>
+                                {autofillTo && autofillTo.features.map((item, index) => {
+                                    return (
+                                        <Table.Row key={index} className="autofill-item" onClick={() => {
+                                            setSearchLocationTo(item.properties.label);
+                                            setStopIDTo(item.properties.id);
+                                            setOpenAutofillTo(false);
+                                        }}>
+                                            <Table.Cell><Icon icon={faChevronRight} marginRight />{item.properties.label}</Table.Cell>
+                                        </Table.Row>
+                                    )
+                                }
+                                )}
+                                </Table.Body>
+                            </Table>
+                        }
+                        visible={openAutofillTo}
+                        onClickOutside={() => setOpenAutofillTo(false)}
+                        variant='border'
+                    >
+                        <Input
+                            placeholder='Stop Place'
+                            label='To'
+                            id="searchStop"
+                            clearable
+                            icon={faSearch}
+                            value={searchLocationTo}
+                            onChange={e => setSearchLocationTo(e.target.value)}
+                            onFocus={() => setOpenAutofillTo(true)}
+                            required
+                        />
+                    </Dropdown>
+                    <div className='hoz'>
+                        <DatePicker
+                            label='When'
+                            selected={when}
+                            onChange={d => setWhen(d)}
+                            showTimeSelect
+                            timeIntervals={10}
+                            state={when ? 'default' : 'warning'}
+                            feedback={when ? '' : 'Missing date'}
+                            required
+                        />
+                        <Button onClick={() => setWhen(new Date)} variant='outline'>Now</Button><br />
+                    </div>
+                    <Button onClick={() => getTripPlans()} state={searchButtonState} id='searchButtonTrip'>Search</Button>
+                    {tripPlaner.length > 0 && <Accordion mode='compact' variant='styled' id='tripPlanerViewer'>
+                        {tripPlaner.map((group) => {
+                            return (
+                                <>
+                                    {group.tripPatterns.map((item) => {
+                                        return (
+                                            <Accordion.Item title={item.startTime.substring(11, 16)}>
+                                                <h4 className='bf-h4'>Fra {item.legs[0].fromPlace.name}</h4>
+                                                <StepBar>
+                                                    {item.legs.map((leg, index) => {
+                                                        return (
+                                                            <a
+                                                                href={leg}
+                                                                key={index}
+                                                                onClick={e => handleLegClick(e, leg)}
+                                                                className={activeStep === leg ? 'active' : ''}
+                                                            >
+                                                                <StepBar.Item>
+                                                                    {leg.mode === 'foot' ? <Icon icon={faWalking} marginRight/> : (leg.mode === 'bus' ? <Icon icon={faBus} marginRight /> : (leg.mode === 'rail' ? <Icon icon={faTrain} marginRight /> : (leg.mode === 'subway' && <Icon icon={faSubway} marginRight />)))}{leg.mode !== 'foot' ? leg.serviceJourney.journeyPattern.line.publicCode + ' ' + leg.toEstimatedCall.destinationDisplay.frontText : 'Walk'}
+                                                                </StepBar.Item>
+                                                            </a>
+                                                        )
+                                                    })}
+                                                </StepBar>
+                                                <h4 className='bf-h4'>Til {item.legs[item.legs.length - 1].toPlace.name}</h4>
+                                                
+                                            </Accordion.Item>
+                                        )
+                                    })}
+                                </>
+                            )
+                        })}
+                    </Accordion>}
+                    {tripPlaner.length > 0 && <Button onClick={() => moreTripPlans()} variant='filled' id='moreButton'>Load more</Button>}
+                </>
+            }>Trip Planner</Tabs.Item>
+        </Tabs>
       </div>
       <div className='bfc-base-3-bg bfl-padding'>
         <h1 className='bf-h1'>Oslo Sykkel</h1>
@@ -585,7 +836,7 @@ function App() {
                     <Table.Cell>{cycle.data.stations.find(item => item.station_id === "737").num_bikes_available}</Table.Cell>
                 </Table.Row>
             </Table.Body>
-        </Table> : <h4 className="bf-h4">Ute av Drift intil videre... :(</h4>}
+        </Table> : <h4 className="bf-h4">Ute av Drift inntil videre... :(</h4>}
       </div>
     </div>
   </Nav>

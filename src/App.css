@@ -49,11 +49,40 @@ main {
   margin-top: 50px;
 }
 
+#tripPlanerViewer {
+  margin-top: 30px;
+}
+
+#moreButton {
+  margin: 20px 40% 0 40%;
+  width: 20%;
+}
+
+.hoz {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+.hoz div {
+  width: 100%;
+}
+
+#searchButtonTrip {
+  width: 30%;
+  margin: 15px 35% 0 35%;
+}
+
+.back1 {
+  height: 100%;
+  width: 100%;
+}
+
 @media (min-width: 600px) {
-  .my-grid-four {
-    --bfl-columns: 2;
+  .my-grid-three {
+    --bfl-columns: 3;
   }
-  .my-tall-element {
+  .my-wide-element {
+    grid-column: span 2;
     grid-row: span 2;
   }
 }
