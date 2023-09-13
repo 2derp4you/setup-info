@@ -795,13 +795,13 @@ function App() {
                                                                 className={activeStep === leg ? 'active' : ''}
                                                             >
                                                                 <StepBar.Item>
-                                                                    {leg.mode === 'foot' ? <Icon icon={faWalking} marginRight/> : (leg.mode === 'bus' ? <Icon icon={faBus} marginRight /> : (leg.mode === 'rail' ? <Icon icon={faTrain} marginRight /> : (leg.mode === 'subway' && <Icon icon={faSubway} marginRight />)))}{leg.mode !== 'foot' ? leg.serviceJourney.journeyPattern.line.publicCode + ' ' + leg.toEstimatedCall.destinationDisplay.frontText : 'Walk'}
+                                                                    {leg.mode === 'foot' ? <Icon icon={faWalking} marginRight/> : (leg.mode === 'bus' ? <Icon icon={faBus} marginRight /> : (leg.mode === 'rail' ? <Icon icon={faTrain} marginRight /> : (leg.mode === 'tram' && <Icon icon={faSubway} marginRight />)))}{leg.mode !== 'foot' ? leg.serviceJourney.journeyPattern.line.publicCode + ' ' + leg.toEstimatedCall.destinationDisplay.frontText : 'Walk'}
                                                                 </StepBar.Item>
                                                             </a>
                                                         )
                                                     })}
                                                 </StepBar>
-                                                <h5 className='bf-h5'>{activeStep.mode === 'foot' ? 'Walk' : (activeStep.mode === 'bus' ? 'Bus' : (activeStep.mode === 'rail' ? 'Train' : (activeStep.mode === 'subway' && 'Subway')))}</h5>
+                                                <h5 className='bf-h5'>{activeStep.mode === 'foot' ? 'Walk' : (activeStep.mode === 'bus' ? 'Bus' : (activeStep.mode === 'rail' ? 'Train' : (activeStep.mode === 'tram' && 'Tram')))} for {(activeStep.duration / 60).toFixed(0)} min</h5>
                                                 <StepBar variant='circle'>
                                                     <StepBar.Item active>{activeStep.mode === 'foot' ? 'From' : 'On'} {activeStep.fromPlace.name}</StepBar.Item>
                                                     <StepBar.Item>{activeStep.mode === 'foot' ? 'To' : 'Off'} {activeStep.toPlace.name}</StepBar.Item>
